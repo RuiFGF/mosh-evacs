@@ -1,8 +1,68 @@
+Panicked evacuation simulation
+==============================
+README  13/MAY/2016
+
+------------------------------
+WHAT DOES THIS DO
+------------------------------
+
+The original program simulated a moshpit by considering it to be a free particle gas governed by a Maxwell-Boltzmann distribution.
+This version adds an extra term to simulate a panicked motion towards a door (to simulate an evacuation).
+
+
+
+------------------------------
+CHANGES MADE TO THE ORIGINAL PROGRAM
+------------------------------
+
+The work done here expands https://github.com/mattbierbaum/moshpits
+
+The main change was adding the extra force term in line (~L351/2)
+We also change boundary conditions to aperiodic (~L96)
+Then, the door condition was added (~L395)
+It was also necessary to count the live particles (~L178) to end the simulation
+
+
+
+------------------------------
+USAGE
+------------------------------
+Compile with:		make 
+Run with:		./entbody
+
+The main.c file contains all the code necessary to run the simulation. 
+Other files serve to create the plots (velocity, temperature, etc) 
+
+You can also run it with 
+arguments:			./entbody [alpha] [eta] [seed]	
+
+
+
+------------------------------
+FUTURE WORK
+------------------------------
+
+-Different room geometries;
+-Random initial particle distribution (as opposed to centered);
+-Different door positions (as well as the number of doors);
+-Deeper study of the effects of each term;
+-Maximum flow through the door; 
+-Critical pressure point;
+-Different types of individuals (i.e. different maximum speed): 
+	-low mobility (child/elderly), 
+	-normal mobility (adult), 
+	-high mobility (panicked individual).
+
+
+------------------------------------------------------------------------------------------
+ORIGINAL README
+------------------------------------------------------------------------------------------
+
 Collective motion at heavy metal concerts
 =========================================
 
 A simple n-body code to simulate a 2D set of particles
-using a cell neighbor locator.  
+using a cell neighbor locator. 
 Uses OpenGL for display capabilities and is reasonably fast.
 
 There are options in the Makefile so that it works easily

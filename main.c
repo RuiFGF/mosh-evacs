@@ -1,6 +1,7 @@
 //===================================================
-// Author: Matthew Bierbaum
-// Project: Collective motion at heavy metal concerts
+// Author: Rui Figueiredo 
+// Project: Panicked escape simulation
+// Based on Matthew Bierbaum's "Collective motion at heavy metal concerts"
 //===================================================
 #include <stdio.h>
 #include <stdlib.h>
@@ -81,17 +82,20 @@ int main(int argc, char **argv){
 
 //==================================================
 // simulation
-//==================================================
 void simulate(double alphain, double sigmain, int seed, double dampin){
+//==================================================
     ran_seed(seed);
     int  RIC  = 0;
 
     int    NMAX    = 50;
-    int    N       = 1000;
+    int    N       = 1000;	//Number of particles ?
+    int    LIVES   = 0;		//Number of live particles 
+    int    SLIVES  = 0;
     double radius  = 1.0;
     double L       = 1.03*sqrt(pi*radius*radius*N);
 
-    int pbc[] = {1,1};
+    int pbc[] = {0,0};	//Periodic boundary conditions
+    double doorX=L, doorY=L, doorL=L/10;
 
     double epsilon = 25.0;
     double sigma   = sigmain;
@@ -116,11 +120,11 @@ void simulate(double alphain, double sigmain, int seed, double dampin){
     double *col = (double*)malloc(sizeof(double)*N); 
     for (i=0; i<N; i++){ type[i] = neigh[i] = rad[i] = 0;}
 
-    double *x = (double*)malloc(sizeof(double)*2*N);
-    double *v = (double*)malloc(sizeof(double)*2*N);
-    double *f = (double*)malloc(sizeof(double)*2*N);
-    double *w = (double*)malloc(sizeof(double)*2*N);
-    double *o = (double*)malloc(sizeof(double)*2*N);
+    double *x = (double*)malloc(sizeof(double)*2*N);	//Particle position?
+    double *v = (double*)malloc(sizeof(double)*2*N);	//Particle speed? 
+    double *f = (double*)malloc(sizeof(double)*2*N);	//Force on the particle?
+    double *w = (double*)malloc(sizeof(double)*2*N);	//Neighbor velocities?
+    double *o = (double*)malloc(sizeof(double)*2*N);	//Normalized particle position?
     for (i=0; i<2*N; i++){o[i] = x[i] = v[i] = f[i] = w[i] = 0.0;}
 
     #ifdef PLOT 
@@ -160,6 +164,7 @@ void simulate(double alphain, double sigmain, int seed, double dampin){
                 v[2*i+0] = vhappy_red * sin(t);
                 v[2*i+1] = vhappy_red * cos(t);
                 type[i] = RED;
+		//LIVES++; 
             } 
         }
     }
@@ -167,7 +172,13 @@ void simulate(double alphain, double sigmain, int seed, double dampin){
         for (i=0; i<N; i++)
             rad[i] = radius;
         init_circle(x, v, type, vhappy_red, N, L);
+//	if (type[i]==RED) LIVES++; 
     }
+
+    for (i=0; i<N; i++)
+	if (type[i]==RED) LIVES++;
+    SLIVES = LIVES; 
+    printf ("Starting lives: %d \n", SLIVES);
 
     //-------------------------------------------------------
     // make boxes for the neighborlist
@@ -232,7 +243,7 @@ void simulate(double alphain, double sigmain, int seed, double dampin){
     }
     #endif
 
-    for (t=0.0; t<time_end; t+=dt){
+    for (t=0.0; t<time_end; t+=dt){	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - START THE CYCLE
 
         int index[2];
         for (i=0; i<size_total; i++)
@@ -316,8 +327,8 @@ void simulate(double alphain, double sigmain, int seed, double dampin){
             // flocking force 
             wlen = sqrt(w[2*i+0]*w[2*i+0] + w[2*i+1]*w[2*i+1]);
             if (type[i] == RED && neigh[i] > 0 && wlen > 1e-6){
-                f[2*i+0] += alpha * w[2*i+0] / wlen; 
-                f[2*i+1] += alpha * w[2*i+1] / wlen;
+                f[2*i+0] += 0.1 * alpha * w[2*i+0] / wlen; 
+                f[2*i+1] += 0.1 * alpha * w[2*i+1] / wlen;
             }
 
             //====================================
@@ -336,12 +347,14 @@ void simulate(double alphain, double sigmain, int seed, double dampin){
                 double u1 = ran_ran2();
                 double u2 = 2*pi*ran_ran2();
                 double lfac = sqrt(-2*log(u1));
-                f[2*i+0] += sigma*lfac*cos(u2);
-                f[2*i+1] += sigma*lfac*sin(u2);
+                f[2*i+0] += 5*sigma*lfac*cos(u2);
+                f[2*i+1] += 5*sigma*lfac*sin(u2);
+		f[2*i+0] += exp(-(x[2*i+0]-doorX)/2*sigma); //The particles are attracted to the door
+                f[2*i+1] += exp(-(x[2*i+1]-doorY)/2*sigma); //The particles are attracted to the door
             }
 
             //=====================================
-            // kick force
+            // kick force (repulsion)
             f[2*i+0] += o[2*i+0]; o[2*i+0] = 0.0;
             f[2*i+1] += o[2*i+1]; o[2*i+1] = 0.0;
         }
@@ -380,10 +393,13 @@ void simulate(double alphain, double sigmain, int seed, double dampin){
                 }
                 else {
                     const double restoration = 1.0;
-                    if (x[2*i+j] >= L){x[2*i+j] = 2*L-x[2*i+j]; v[2*i+j] *= -restoration;}
+                    if (x[2*i] < doorX && x[2*i] > doorX-doorL/2 && x[2*i+1] < doorY && x[2*i+1] > doorY-doorL/2 && type[i] == RED){
+			v[2*i+j] = 0; x[2*i+j] = 0; type[i] = BLACK; LIVES -= 1;}
+		    if (x[2*i+j] >= L){x[2*i+j] = 2*L-x[2*i+j]; v[2*i+j] *= -restoration;}
                     if (x[2*i+j] < 0) {x[2*i+j] = -x[2*i+j];    v[2*i+j] *= -restoration;}
-                    if (x[2*i+j] >= L-EPSILON || x[2*i+j] < 0){x[2*i+j] = mymod(x[2*i+j], L);}
+                    if (x[2*i+j] >= L-EPSILON || x[2*i+j] < 0){x[2*i+j] = mymod(x[2*i+j], L);} //What does this line do?
                 }
+		
             }
 
             // just check for errors
@@ -392,6 +408,9 @@ void simulate(double alphain, double sigmain, int seed, double dampin){
                 printf("out of bounds\n");
             
             col[i] = col[i]/12; 
+	    //printf ("Lives: %d \n", LIVES);
+	    if (LIVES == 0){printf("Time: %f \n", t); exit(0);}
+	    //if (LIVES < SLIVES/10){printf("Time: %f \n", t); exit(0);}
         }
         #ifdef OPENMP
         #pragma omp barrier
@@ -597,8 +616,9 @@ void init_circle(double *x, double *v,
         double rad = sqrt(0.16*L*L / pi);
 
         //if (i<0.15*N)
-        if (dd < rad)
+        if (dd < rad){
             type[i] = RED;
+	}
         else
             type[i] = BLACK;
 
@@ -610,7 +630,8 @@ void init_circle(double *x, double *v,
             v[2*i+0] = 0.0;
             v[2*i+1] = 0.0;
         }
-    }   
+    }
+      
 } 
 
 //=======================================

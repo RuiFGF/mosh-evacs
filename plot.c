@@ -47,7 +47,7 @@ void plot_init_opengl(){
   win = glutCreateWindow("EntBody Simulation");	
 
   glDisable(GL_DEPTH_TEST);
-  glClearColor(1.0, 1.0, 1.0, 0.0);	/* set background to white */
+  glClearColor(176.0, 196.0, 222.0, 0.0);	/* set background to white */
   glutKeyboardFunc(key_down);
   glutKeyboardUpFunc(key_up);
   glViewport(0,0,plot_sizex, plot_sizey);
